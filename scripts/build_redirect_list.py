@@ -5,57 +5,92 @@ SOURCE = Path("blocklist.txt")
 OUTPUT = Path("blocklistredirect.txt")
 REDIRECT_IP = "10.200.200.1"
 
-# Supports:
+# Supported formats:
+#
 # ||example.com^
 # ||example.com^$modifier
+# ||*.example.com^
+# ||*.ru^
 # example.com
+
 adguard_rule = re.compile(
-    r"^\|\|([A-Za-z0-9.-]+)\^(?:\$.*)?$"
+    r"^\|\|(\*\.)?([A-Za-z0-9.-]+)\^(?:\$.*)?$"
 )
+
 plain_domain = re.compile(
     r"^([A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)$"
 )
 
-domains = []
+patterns = []
 seen = set()
 skipped = 0
 
-for raw_line in SOURCE.read_text(encoding="utf-8").splitlines():
+source_text = SOURCE.read_text(
+    encoding="utf-8",
+    errors="replace",
+)
+
+for raw_line in source_text.splitlines():
     line = raw_line.strip()
 
-    if not line or line.startswith(("!", "#")):
+    if not line:
+        continue
+
+    if line.startswith(("!", "#")):
         continue
 
     match = adguard_rule.fullmatch(line)
-    if not match:
+
+    if match:
+        wildcard = match.group(1) or ""
+        domain = match.group(2).lower().rstrip(".")
+        pattern = f"{wildcard}{domain}"
+    else:
         match = plain_domain.fullmatch(line)
 
-    if not match:
-        skipped += 1
+        if not match:
+            skipped += 1
+            continue
+
+        pattern = match.group(1).lower().rstrip(".")
+
+    if pattern in seen:
         continue
 
-    domain = match.group(1).lower().rstrip(".")
+    seen.add(pattern)
+    patterns.append(pattern)
 
-    if domain not in seen:
-        seen.add(domain)
-        domains.append(domain)
-
-output = [
+output_lines = [
     "! Title: Redirected blocklist",
-    "! This file is generated automatically from blocklist.txt.",
+    "! Generated automatically from blocklist.txt.",
     f"! Redirect IPv4: {REDIRECT_IP}",
-    f"! Domains: {len(domains)}",
-    f"! Unsupported rules skipped: {skipped}",
+    f"! Generated rules: {len(patterns) * 2}",
+    f"! Source patterns: {len(patterns)}",
+    f"! Unsupported source rules skipped: {skipped}",
     "!",
 ]
 
-for domain in domains:
-    output.extend([
-        f"||{domain}^$dnsrewrite=NOERROR;A;{REDIRECT_IP}",
-        f"||{domain}^$dnsrewrite=NOERROR;AAAA;",
-    ])
+for pattern in patterns:
+    output_lines.append(
+        f"||{pattern}^"
+        f"$dnsrewrite=NOERROR;A;{REDIRECT_IP}"
+    )
 
-OUTPUT.write_text("\n".join(output) + "\n", encoding="utf-8")
+    output_lines.append(
+        f"||{pattern}^"
+        "$dnsrewrite=NOERROR;AAAA;"
+    )
 
-print(f"Generated {OUTPUT} with {len(domains)} domains.")
-print(f"Skipped {skipped} unsupported rules.")
+OUTPUT.write_text(
+    "\n".join(output_lines) + "\n",
+    encoding="utf-8",
+)
+
+print(
+    f"Generated {OUTPUT} with "
+    f"{len(patterns) * 2} redirect rules."
+)
+
+print(
+    f"Skipped {skipped} unsupported source rules."
+)
