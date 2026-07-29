@@ -3,7 +3,7 @@ import re
 
 SOURCE = Path("blocklist.txt")
 OUTPUT = Path("blocklistredirect.txt")
-REDIRECT_IP = "10.200.200.1"
+REDIRECT_IP = "10.200.200.3"
 
 # Supported formats:
 #
