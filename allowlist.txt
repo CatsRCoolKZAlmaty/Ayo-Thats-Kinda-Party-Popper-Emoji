@@ -36,6 +36,7 @@
 @@||geometrydash.com^
 @@||ggpht.com^
 @@||googlevideo.com^
+@@||i.ytimg.com^
 @@||hcaptcha.com^
 @@||ipv6.msftconnecttest.com^
 @@||login.live.com^
@@ -86,6 +87,7 @@
 @@||www.msftncsi.com^
 @@||x1.c.lencr.org^
 @@||x2.c.lencr.org^
+@@||ytimg.googleusercontent.com^
 @@||billing.multilogin.com^
 @@||docs.aws.amazon.com^
 @@||docs.browserless.io^
